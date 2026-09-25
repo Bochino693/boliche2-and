@@ -9,8 +9,9 @@ var player_roll_solto_atual: AudioStreamPlayer = null
 
 
 @export var duracao_base: float = 1.08
-@export var escala_perto: float = 0.82
-@export var escala_longe: float = 0.58
+## A bola azul é desenhada em 256 px (o dobro da antiga): escalas pela metade.
+@export var escala_perto: float = 0.41
+@export var escala_longe: float = 0.29
 @export var escala_impacto: float = 0.16
 @export var opacidade_longe: float = 0.90
 

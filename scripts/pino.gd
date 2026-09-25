@@ -98,6 +98,12 @@ var ref_strike: Vector2 = Vector2(96, 96)
 
 
 var _fx: FxPino = null
+## Distância (px) até onde um pino que cai alcança o vizinho.
+const DISTANCIA_VIZINHO := 110.0
+var _caiu_em_ms: int = 0
+var _escala_caido: Vector2 = Vector2.ZERO
+var _pos_sprite_caido: Vector2 = Vector2.ZERO
+var _tw_balanco: Tween = null
 
 
 func _ready() -> void:
@@ -513,6 +519,10 @@ func cair_voando(animacao: String, intensidade: float = 1.0, origem_impacto: Vec
 			return
 
 	# ── A partir daqui a bola tocou este pino ────────────────
+	if _tw_balanco != null and _tw_balanco.is_valid():
+		_tw_balanco.kill()
+	if sprite != null:
+		sprite.rotation_degrees = 0.0
 	derrubado = true
 	hover = false
 	escala_fx = 1.0
@@ -557,107 +567,172 @@ func cair_voando(animacao: String, intensidade: float = 1.0, origem_impacto: Vec
 		tw_flash.tween_property(sprite, "modulate", Color(1.55, 1.45, 1.30, 1.0), 0.020)
 		tw_flash.chain().tween_property(sprite, "modulate", Color(1.0, 1.0, 1.0, 1.0), 0.052)
 
-	# ── Parâmetros de trajetória ──────────────────────────────
+	# ── Quem me acertou: a bola, ou um pino vizinho que caiu antes? ──
+	# Na cascata do strike cada pino recebe um atraso; o que caiu logo
+	# antes, entre a bola e este, é quem "bate" nele (reação em cadeia).
+	var batedor: Vector2 = _pino_que_me_acertou(origem_impacto)
+	var por_pino: bool = batedor != Vector2.INF
+	if por_pino:
+		origem_impacto = batedor
+	_caiu_em_ms = Time.get_ticks_msec()
+
+	# ── Direção: para longe de quem bateu, sempre com um pouco "para trás"
+	# (pista acima, rumo ao fosso) ──
 	var dir: Vector2 = global_position - origem_impacto
 	if dir.length() < 0.5:
-		dir = Vector2(1.0 if randf() > 0.5 else -1.0, -0.06)
+		dir = Vector2(randf_range(-0.3, 0.3), -1.0)
 	dir = dir.normalized()
+	if dir.y > -0.22:
+		dir = Vector2(dir.x, -0.22).normalized()
 
-	# Dragon Bowling 2: faíscas no contato e rastro do voo.
+	# Faíscas + lascas no ponto de contato, e o rastro do voo.
 	if _fx != null and sprite != null:
 		var centro_local: Vector2 = sprite.offset
 		var quadro: Texture2D = sprite.sprite_frames.get_frame_texture(sprite.animation, sprite.frame) if sprite.sprite_frames != null else null
 		if quadro != null and not sprite.centered:
 			centro_local += quadro.get_size() * 0.5
 		var centro: Vector2 = sprite.get_global_transform() * centro_local
-		_fx.faiscas(centro, Vector2(dir.x, dir.y - 0.8).normalized())
+		if por_pino:
+			# o choque é entre os dois pinos, mais perto de quem bateu
+			centro += (origem_impacto - global_position) * 0.35
+		_fx.faiscas(centro, Vector2(dir.x, dir.y - 0.6).normalized(), 0.62 if por_pino else 1.0)
 		_fx.rastro(sprite)
 
-	var forca: float = clamp(intensidade, 0.90, 1.28)
-	var t_forca: float = inverse_lerp(0.90, 1.65, forca)
+	if sprite == null:
+		return
 
-	# Voo levemente maior que o original
-	var lateral_base: float = lerp(12.0, deslocamento_empurrao_max_x * 1.12, t_forca)
-	var frente_base: float  = lerp(9.0,  deslocamento_empurrao_max_y * 1.18, t_forca)
-	var voo_base: float     = lerp(20.0, distancia_voo_max * 1.12, t_forca)
+	var forca: float = clamp(intensidade, 0.90, 1.60)
+	var t_forca: float = inverse_lerp(0.90, 1.60, forca)
 
-	var empurrao_x: float = dir.x * lateral_base
-	var empurrao_y: float = -lerp(2.5, 8.0, t_forca)
-	var deslizamento_x: float = dir.x * voo_base
-	var deslizamento_y: float = frente_base
-
-	if tipo_queda == "down_left":
-		deslizamento_x = -abs(deslizamento_x)
-	elif tipo_queda == "down_rt":
-		deslizamento_x = abs(deslizamento_x)
-
-	var lado_rot: float = sign(deslizamento_x)
-	if lado_rot == 0.0:
-		lado_rot = sign(dir.x) if dir.x != 0.0 else 1.0
+	var lado_rot: float = signf(dir.x)
+	if absf(dir.x) < 0.08:
+		lado_rot = 1.0 if randf() > 0.5 else -1.0
 	if tipo_queda == "down_left":
 		lado_rot = -1.0
 	elif tipo_queda == "down_rt":
 		lado_rot = 1.0
 
-	# Rotação levemente mais dramática + variação individual
-	var rot_pico: float  = lado_rot * lerp(20.0, 40.0, t_forca)
-	var rot_final: float = lado_rot * lerp(90.0, rotacao_max_queda, t_forca)
-	rot_final += randf_range(-14.0, 14.0)   # cada pino cai diferente
+	# Tipo do tombo:
+	#  • PARA TRÁS (bola/pino de frente): o pino deita apontando para o
+	#    fundo — em perspectiva ele "encurta", sobe na pista e gira pouco;
+	#  • DE LADO (golpe lateral): gira ~90° e escorrega na diagonal.
+	var de_lado: bool = (tipo_queda != "strike" and absf(dir.x) > 0.35) or absf(dir.x) > 0.72
+	var s0: Vector2 = escala_travada_queda if escala_travada_queda != Vector2.ZERO else sprite.scale
+	var altura: float = ref_idle.y * s0.y
+	var pos_sprite0: Vector2 = sprite.position
 
-	# Pitch — inclinação para frente (skew do sprite)
-	var pitch_alvo: float = 0.0
-	match tipo_queda:
-		"strike":
-			pitch_alvo = randf_range(-0.30, -0.18)
-		"down_left", "down_rt":
-			pitch_alvo = randf_range(-0.16, -0.06)
-
-	# Squash no hit — acontece AQUI, depois do delay
-	var squash_x: float = lerp(1.10, 1.18, t_forca)
-	var squash_y: float = lerp(0.90, 0.82, t_forca)
-
+	var recuo: float = lerp(40.0, 96.0, t_forca) * clamp(-dir.y, 0.35, 1.0) * randf_range(0.85, 1.15)
+	var desvio: float = dir.x * lerp(24.0, 70.0, t_forca) * randf_range(0.8, 1.2)
+	var deitar: float
+	var giro: float
+	if de_lado:
+		deitar = randf_range(0.80, 0.92)
+		giro = lado_rot * randf_range(74.0, 106.0)
+		recuo *= 0.55
+	else:
+		deitar = randf_range(0.46, 0.58)
+		giro = lado_rot * randf_range(22.0, 52.0)
+	if por_pino:
+		recuo *= 0.8
+		desvio *= 0.8
+	var s_final := Vector2(s0.x * randf_range(0.90, 0.96), s0.y * deitar)
+	# deitado, o pino fica rente ao chão: o centro desce
+	var desce: float = altura * 0.5 * (1.0 - (0.30 if de_lado else deitar)) * 0.85
+	var pos_sprite_final: Vector2 = pos_sprite0 + Vector2(0.0, desce)
 	var base_pos: Vector2 = position
-	var base_mod: Color   = Color(1, 1, 1, 1)
-	if sprite != null:
-		base_mod = sprite.modulate
+	var alvo: Vector2 = base_pos + Vector2(desvio, -recuo)
+	var sombra := Color(0.86, 0.86, 0.90, 1.0)
 
-	# ── Tween da queda ────────────────────────────────────────
+	_escala_caido = Vector2.ZERO
 	var tw: Tween = create_tween()
-	tw.set_trans(Tween.TRANS_CUBIC)
-	tw.set_ease(Tween.EASE_OUT)
 
-	# Squash imediato no momento do contato
-	if sprite != null:
-		tw.parallel().tween_property(sprite, "scale",
-			Vector2(escala_travada_queda.x * squash_x, escala_travada_queda.y * squash_y),
-			0.032)
+	# Fase 1 — tranco (achata no contato e já começa a inclinar)
+	tw.tween_property(sprite, "scale", Vector2(s0.x * 1.12, s0.y * 0.88), 0.035)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(self, "position", base_pos + dir * 9.0, 0.06)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(sprite, "rotation_degrees", giro * 0.14, 0.06)
+	tw.parallel().tween_property(sprite, "modulate", Color(1.25, 1.2, 1.12, 1.0), 0.03)
 
-	# Fase 1 — empurrão explosivo
-	tw.tween_property(self, "position", base_pos + Vector2(empurrao_x, empurrao_y), duracao_empurrao)
-
-	if sprite != null:
-		tw.parallel().tween_property(sprite, "rotation_degrees", rot_pico, duracao_empurrao)
-		tw.parallel().tween_property(sprite, "skew", pitch_alvo * 0.5, duracao_empurrao)
-		tw.parallel().tween_property(sprite, "modulate", Color(1.08, 1.06, 1.04, 1.0), duracao_empurrao)
-		tw.parallel().tween_property(sprite, "scale", escala_travada_queda, duracao_empurrao + 0.035)
-
-	# Fase 2 — tombo (QUART: desacelera suavemente até o chão)
-	tw.set_trans(Tween.TRANS_QUART)
-	tw.tween_property(self, "position", base_pos + Vector2(deslizamento_x, deslizamento_y), duracao_tombo)
-
-	if sprite != null:
-		tw.parallel().tween_property(sprite, "rotation_degrees", rot_final, duracao_tombo)
-		tw.parallel().tween_property(sprite, "skew", pitch_alvo, duracao_tombo)
-		tw.parallel().tween_property(sprite, "modulate", base_mod, duracao_tombo)
+	# Fase 2 — tombo: o voo desacelera (arrasto) e a queda acelera (gravidade)
+	var t_voo: float = lerp(0.30, 0.36, t_forca)
+	var t_tombo: float = 0.24
+	tw.tween_property(self, "position", alvo, t_voo)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(sprite, "rotation_degrees", giro, t_tombo)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(sprite, "scale", s_final, t_tombo)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(sprite, "position", pos_sprite_final, t_tombo)\
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(sprite, "modulate", sombra, t_tombo)
 
 	tw.finished.connect(func() -> void:
-		fixar_tamanho_visual_derrubado()
+		_escala_caido = s_final
+		_pos_sprite_caido = pos_sprite_final
 		if _fx != null:
 			_fx.poeira(to_global(Vector2(0, linha_base_local)))
+		_balancar_vizinhos(dir)
 		_aplicar_quique_no_tatame(forca)
 	)
 
 
+## O pino que caiu há pouco, vizinho, e que está entre quem bateu e este.
+## Devolve a base dele (global) ou Vector2.INF se foi a bola.
+func _pino_que_me_acertou(origem: Vector2) -> Vector2:
+	var pai := get_parent() as Node2D
+	if pai == null:
+		return Vector2.INF
+	var agora: int = Time.get_ticks_msec()
+	var origem_local: Vector2 = pai.to_local(origem)
+	var minha_dist: float = posicao_base_local.distance_to(origem_local)
+	var melhor := Vector2.INF
+	var melhor_d: float = DISTANCIA_VIZINHO
+	for irmao in pai.get_children():
+		if irmao == self or not ("_caiu_em_ms" in irmao) or not irmao.derrubado:
+			continue
+		var quando: int = irmao._caiu_em_ms
+		if quando <= 0 or agora - quando > 700 or agora - quando < 15:
+			continue
+		var base_irmao: Vector2 = irmao.posicao_base_local
+		var d: float = posicao_base_local.distance_to(base_irmao)
+		if d >= melhor_d or base_irmao.distance_to(origem_local) >= minha_dist:
+			continue
+		melhor_d = d
+		melhor = pai.to_global(base_irmao)
+	return melhor
+
+
+## Quem ficou em pé do lado balança com o tranco (só visual: não muda o
+## resultado da jogada).
+func _balancar_vizinhos(dir: Vector2) -> void:
+	var pai := get_parent()
+	if pai == null:
+		return
+	for irmao in pai.get_children():
+		if irmao == self or not irmao.has_method("balancar") or irmao.derrubado:
+			continue
+		var d: float = posicao_base_local.distance_to(irmao.posicao_base_local)
+		if d < DISTANCIA_VIZINHO * 1.15:
+			irmao.balancar(irmao.posicao_base_local - posicao_base_local, 1.0 - d / (DISTANCIA_VIZINHO * 1.3))
+
+
+func balancar(de_onde: Vector2, forca: float) -> void:
+	if derrubado or sprite == null or em_quase_queda or empurrando:
+		return
+	if _tw_balanco != null and _tw_balanco.is_valid():
+		return
+	var lado: float = signf(de_onde.x) if absf(de_onde.x) > 1.0 else (1.0 if randf() > 0.5 else -1.0)
+	var amp: float = lerp(3.0, 9.0, clamp(forca, 0.0, 1.0)) * lado
+	var base_rot: float = sprite.rotation_degrees
+	_tw_balanco = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tw_balanco.tween_property(sprite, "rotation_degrees", base_rot + amp, 0.07)
+	_tw_balanco.tween_property(sprite, "rotation_degrees", base_rot - amp * 0.6, 0.12)
+	_tw_balanco.tween_property(sprite, "rotation_degrees", base_rot + amp * 0.25, 0.10)
+	_tw_balanco.tween_property(sprite, "rotation_degrees", base_rot, 0.10)
+
+
+## Pouso: o pino deitado dá um quique curto na pista.
 func _aplicar_quique_no_tatame(forca: float = 1.0) -> void:
 	if sprite == null:
 		return
@@ -665,48 +740,29 @@ func _aplicar_quique_no_tatame(forca: float = 1.0) -> void:
 		return
 
 	finalizando_queda = true
-
-	var base_rot_sprite: float = sprite.rotation_degrees
-	var base_pos_no: Vector2 = position
+	if not usar_quique_no_tatame or _escala_caido == Vector2.ZERO:
+		finalizando_queda = false
+		_sumir_apos_queda()
+		return
 
 	var intensidade: float = clamp(forca * intensidade_quique, 0.90, 1.55)
-	var lado: float = 1.0
+	var base_rot: float = sprite.rotation_degrees
+	var base_pos_no: Vector2 = position
+	var lado: float = signf(base_rot) if absf(base_rot) > 1.0 else 1.0
+	var pulo: float = deslocamento_quique_y * 0.42 * intensidade
+	var qr: float = rotacao_quique * 0.6 * intensidade * lado
 
-	match animacao_atual_nome:
-		"down_left":
-			lado = -1.0
-		"down_rt":
-			lado = 1.0
-		_:
-			lado = -1.0 if randf() < 0.5 else 1.0
-
-	var qy: float = deslocamento_quique_y * intensidade
-	var qx: float = deslocamento_quique_x * intensidade * lado
-	var qr: float = rotacao_quique * intensidade * lado
-
-	var tw: Tween = create_tween()
-	tw.set_trans(Tween.TRANS_CUBIC)
-	tw.set_ease(Tween.EASE_OUT)
-
-	if usar_quique_no_tatame:
-		# Squash no chão antes de ricochetear
-		tw.parallel().tween_property(sprite, "scale",
-			Vector2(escala_travada_queda.x * 1.15, escala_travada_queda.y * 0.86), 0.030)
-
-		tw.tween_property(self, "position", base_pos_no + Vector2(qx, -qy * 0.38), 0.042)
-		tw.parallel().tween_property(sprite, "rotation_degrees", base_rot_sprite + qr, 0.042)
-		tw.parallel().tween_property(sprite, "scale", escala_travada_queda, 0.055)
-
-		tw.tween_property(self, "position", base_pos_no + Vector2(qx * 0.54, qy * 0.27), 0.080)
-		tw.parallel().tween_property(sprite, "rotation_degrees", base_rot_sprite - qr * 0.40, 0.080)
-
-		tw.tween_property(self, "position", base_pos_no + Vector2(qx * 0.17, -qy * 0.09), 0.055)
-		tw.parallel().tween_property(sprite, "rotation_degrees", base_rot_sprite + qr * 0.15, 0.055)
-
-		tw.tween_property(self, "position", base_pos_no, 0.088)
-		tw.parallel().tween_property(sprite, "rotation_degrees", base_rot_sprite, 0.088)
-	else:
-		tw.tween_interval(0.04)
+	var tw: Tween = create_tween().set_trans(Tween.TRANS_SINE)
+	# achata no chão, pula um pouco e assenta
+	tw.tween_property(sprite, "scale", Vector2(_escala_caido.x * 1.06, _escala_caido.y * 0.86), 0.035)
+	tw.tween_property(self, "position", base_pos_no + Vector2(0, -pulo), 0.07).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(sprite, "scale", _escala_caido, 0.07)
+	tw.parallel().tween_property(sprite, "rotation_degrees", base_rot + qr, 0.07)
+	tw.tween_property(self, "position", base_pos_no, 0.08).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(sprite, "rotation_degrees", base_rot - qr * 0.3, 0.08)
+	tw.tween_property(self, "position", base_pos_no + Vector2(0, -pulo * 0.22), 0.05).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(sprite, "rotation_degrees", base_rot, 0.05)
+	tw.tween_property(self, "position", base_pos_no, 0.05).set_ease(Tween.EASE_IN)
 
 	tw.finished.connect(func() -> void:
 		finalizando_queda = false
@@ -714,6 +770,7 @@ func _aplicar_quique_no_tatame(forca: float = 1.0) -> void:
 	)
 
 
+## Depois de deitado um pouco, escorrega para o fosso e some.
 func _sumir_apos_queda() -> void:
 	if sumindo_apos_queda:
 		return
@@ -724,7 +781,9 @@ func _sumir_apos_queda() -> void:
 	tw.tween_interval(tempo_espera_apos_queda)
 
 	if sprite != null:
-		tw.tween_property(sprite, "modulate", Color(1, 1, 1, 0.0), tempo_fade_apos_queda)
+		tw.tween_property(sprite, "modulate", Color(0.8, 0.8, 0.85, 0.0), tempo_fade_apos_queda)
+		tw.parallel().tween_property(self, "position", position + Vector2(0, -26), tempo_fade_apos_queda)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 
 	if numero_label != null:
 		tw.parallel().tween_property(numero_label, "modulate", Color(1, 1, 1, 0.0), tempo_fade_apos_queda)
@@ -795,6 +854,11 @@ func fixar_tamanho_visual_derrubado() -> void:
 	if sprite == null:
 		return
 
+	if _escala_caido != Vector2.ZERO:
+		sprite.scale = _escala_caido
+		sprite.position = _pos_sprite_caido
+		return
+
 	var escala_base_queda: Vector2 = escala_travada_queda
 	if escala_base_queda == Vector2.ZERO:
 		escala_base_queda = sprite.scale
@@ -820,6 +884,10 @@ func destacar_acerto() -> void:
 
 func resetar() -> void:
 	derrubado = false
+	_caiu_em_ms = 0
+	_escala_caido = Vector2.ZERO
+	if _tw_balanco != null and _tw_balanco.is_valid():
+		_tw_balanco.kill()
 	hover = false
 	animacao_atual_nome = "idle"
 	escala_fx = 1.0

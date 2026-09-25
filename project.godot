@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Dragon Bowling 2"
-config/version="1.0.0-db2"
+config/version="1.0.1-db2"
 run/main_scene="res://scene/abertura.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 boot_splash/show_image=true
