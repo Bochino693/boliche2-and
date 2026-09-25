@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/configuracao_tvbox.gd" id="1_config"]
+
+[node name="ConfiguracaoTVBox" type="Control"]
+script = ExtResource("1_config")

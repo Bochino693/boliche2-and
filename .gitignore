@@ -1,0 +1,10 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+# Saídas de build e arquivos gerados na máquina
+/build/
+/APK-Pronto/
+*.apk
+*.idsig
+/logs/
+/shader_cache/

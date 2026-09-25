@@ -1,0 +1,171 @@
+[gd_scene format=3 uid="uid://co0r1q1xp6h10"]
+
+[ext_resource type="Script" uid="uid://bcciks5e2xyy5" path="res://scripts/game.gd" id="1_33cqm"]
+[ext_resource type="PackedScene" uid="uid://cttrf0l1vdpas" path="res://entities/pino.tscn" id="2_dbls1"]
+[ext_resource type="Texture2D" uid="uid://b18hq1hvpndtc" path="res://sprites/ball-new.png" id="3_xwcet"]
+[ext_resource type="PackedScene" uid="uid://blm4g8wc4u12v" path="res://entities/bola.tscn" id="4_p1ry8"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_n4st5"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p1ry8"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_dbls1"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_33cqm"]
+
+[node name="Game" type="Node2D" unique_id=1958550336]
+script = ExtResource("1_33cqm")
+pino_scene = ExtResource("2_dbls1")
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="." unique_id=592832380]
+
+[node name="pista" type="ParallaxLayer" parent="ParallaxBackground" unique_id=355211356]
+
+[node name="Sprite" type="Sprite2D" parent="ParallaxBackground/pista" unique_id=792264218]
+texture = ExtResource("3_xwcet")
+centered = false
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="ParallaxBackground/pista" unique_id=996942036]
+sprite_frames = SubResource("SpriteFrames_n4st5")
+
+[node name="Pins" type="Node2D" parent="." unique_id=610065587]
+
+[node name="Pino9" parent="Pins" unique_id=37086194 instance=ExtResource("2_dbls1")]
+position = Vector2(40, 120)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino9" unique_id=1492030745]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino9/StaticBody2D" unique_id=1442126430]
+shape = SubResource("RectangleShape2D_p1ry8")
+
+[node name="Pino10" parent="Pins" unique_id=1931713192 instance=ExtResource("2_dbls1")]
+position = Vector2(412, 417)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino10" unique_id=1044442388]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino10/StaticBody2D" unique_id=1604203919]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino2" parent="Pins" unique_id=515295736 instance=ExtResource("2_dbls1")]
+position = Vector2(-40, 40)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino2" unique_id=1809703820]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino2/StaticBody2D" unique_id=1633026210]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino" parent="Pins" unique_id=611430873 instance=ExtResource("2_dbls1")]
+position = Vector2(583, 435)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino" unique_id=933897970]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino/StaticBody2D" unique_id=997789883]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino7" parent="Pins" unique_id=614264381 instance=ExtResource("2_dbls1")]
+position = Vector2(-120, 120)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino7" unique_id=664971655]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino7/StaticBody2D" unique_id=578690810]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino3" parent="Pins" unique_id=1124026584 instance=ExtResource("2_dbls1")]
+position = Vector2(40, 40)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino3" unique_id=249930563]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino3/StaticBody2D" unique_id=1565214319]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino4" parent="Pins" unique_id=413766920 instance=ExtResource("2_dbls1")]
+position = Vector2(-80, 80)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino4" unique_id=339321188]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino4/StaticBody2D" unique_id=937755492]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino5" parent="Pins" unique_id=1392625661 instance=ExtResource("2_dbls1")]
+position = Vector2(0, 80)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino5" unique_id=1955966397]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino5/StaticBody2D" unique_id=51763948]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino6" parent="Pins" unique_id=987612360 instance=ExtResource("2_dbls1")]
+position = Vector2(80, 80)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino6" unique_id=1768678041]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino6/StaticBody2D" unique_id=1973808348]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Pino8" parent="Pins" unique_id=1481289972 instance=ExtResource("2_dbls1")]
+position = Vector2(-40, 120)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Pins/Pino8" unique_id=1300403069]
+position = Vector2(-410, -421)
+physics_material_override = SubResource("PhysicsMaterial_dbls1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Pins/Pino8/StaticBody2D" unique_id=1533065919]
+shape = SubResource("RectangleShape2D_33cqm")
+
+[node name="Bola" parent="." unique_id=930023550 instance=ExtResource("4_p1ry8")]
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=2086328733]
+
+[node name="Hud" type="CanvasLayer" parent="." unique_id=991243560]
+
+[node name="MapaPanel" type="ColorRect" parent="Hud" unique_id=511712161]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="StatusPanel" type="ColorRect" parent="Hud" unique_id=81039854]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TopPanel" type="ColorRect" parent="Hud" unique_id=902516622]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="HudPanel" type="ColorRect" parent="Hud" unique_id=273165275]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="StatusLabel" type="Label" parent="Hud" unique_id=2085683074]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="BannerLabel" type="Label" parent="Hud" unique_id=787020049]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="RoundLabel" type="Label" parent="Hud" unique_id=1768989339]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="Placar" type="Label" parent="Hud" unique_id=891232399]
+offset_right = 40.0
+offset_bottom = 23.0
+
+[node name="MapaLabel" type="Label" parent="Hud" unique_id=799601019]
+offset_right = 40.0
+offset_bottom = 23.0

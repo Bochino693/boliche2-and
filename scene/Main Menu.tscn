@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://cwtn6ci5owcr3"]
+
+[ext_resource type="Script" uid="uid://svmkv0cnb5x" path="res://scripts/main_menu.gd" id="1_10som"]
+[ext_resource type="Texture2D" uid="uid://b7fxu4nl4hu6s" path="res://sprites/dragon_bow.png" id="2_ictjd"]
+
+[node name="Main Menu" type="Node2D" unique_id=1796450901]
+script = ExtResource("1_10som")
+
+[node name="ParallaxBackground" type="ParallaxBackground" parent="." unique_id=1408972567]
+
+[node name="ParallaxLayer" type="ParallaxLayer" parent="ParallaxBackground" unique_id=604746537]
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/ParallaxLayer" unique_id=929167127]
+texture = ExtResource("2_ictjd")
+centered = false
+
+[node name="Button Manager" type="Control" parent="." unique_id=400226533]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="start_button" type="Button" parent="Button Manager" unique_id=1936764880]
+layout_mode = 0
+offset_left = 353.0
+offset_top = 1444.0
+offset_right = 673.0
+offset_bottom = 1538.0
+text = "PRESSIONE START PARA INICIAR O JOGO!"
