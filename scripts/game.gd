@@ -576,41 +576,10 @@ func _ready() -> void:
 
 	# Agora sim libera a imagem já posicionada.
 	visible = true
-	_criar_ambiente_vivo()
 
 	call_deferred("_enviar_led", "IDLE")
 	await animar_intro_partida()
 
-
-
-## DRAGON BOWLING 2: faíscas douradas e azuis sobem da espiral brilhante
-## da pista (a mesma vida da arte do menu). Criadas uma vez só, leves.
-func _criar_ambiente_vivo() -> void:
-	for cor: Color in [Color(1.0, 0.85, 0.35, 0.85), Color(0.45, 0.9, 1.0, 0.75)]:
-		var e := CPUParticles2D.new()
-		e.texture = FxPino._textura_ponto()
-		e.amount = 12
-		e.lifetime = 3.2
-		e.preprocess = 3.2
-		e.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-		e.emission_rect_extents = Vector2(300, 170)
-		e.position = Vector2(512, 1290)
-		e.direction = Vector2(0, -1)
-		e.spread = 25.0
-		e.gravity = Vector2.ZERO
-		e.initial_velocity_min = 40.0
-		e.initial_velocity_max = 110.0
-		e.scale_amount_min = 0.22
-		e.scale_amount_max = 0.5
-		var some := Gradient.new()
-		some.offsets = PackedFloat32Array([0.0, 0.25, 0.75, 1.0])
-		some.colors = PackedColorArray([Color(cor, 0.0), cor, cor, Color(cor, 0.0)])
-		e.color_ramp = some
-		var mat := CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		e.material = mat
-		e.z_index = 3
-		add_child(e)
 
 
 func _configurar_shader_brilho_fundo() -> void:

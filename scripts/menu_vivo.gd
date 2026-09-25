@@ -3,16 +3,19 @@ extends Node2D
 
 ## A ARTE DO MENU EM MOVIMENTO (Dragon Bowling 2).
 ##
-##  • shaders/arte_viva.gdshader na arte: reflexo no título, bola azul
-##    rolando, esferas do dragão pulsando, estrelas cintilando;
+##  • shaders/arte_viva.gdshader na arte: "foto 3D" (paralaxe por camadas,
+##    sprites/dragon_bow_camadas.png), dragão respirando, bola balançando,
+##    título pulsando, reflexos, esferas do dragão e estrelas cintilando;
 ##  • a arte "respira": zoom lento de ida e volta;
-##  • faíscas douradas e azuis sobem pela tela;
+##  • estrelas de 4 pontas douradas e azuis sobem girando, e luzes macias
+##    (bokeh) flutuam na frente — texturas em alta (sprites/fx);
 ##  • o selo "2" entra com um tranco, gira os raios e pulsa.
 ##
-## Tudo leve: um shader na imagem que já era desenhada, dois emissores
-## pequenos e um desenho simples.
+## Tudo leve: um shader na imagem que já era desenhada, poucos emissores
+## e um desenho simples.
 
 const SHADER_ARTE := preload("res://shaders/arte_viva.gdshader")
+const CAMADAS := preload("res://sprites/dragon_bow_camadas.png")
 const FONTE := "res://fonts/arcade_impact.ttf"
 const CENTRO_DO_SELO := Vector2(900, 1178)
 const RAIO_DO_SELO := 84.0
@@ -31,6 +34,7 @@ func _ready() -> void:
 	if _arte != null:
 		var mat := ShaderMaterial.new()
 		mat.shader = SHADER_ARTE
+		mat.set_shader_parameter("camadas", CAMADAS)
 		_arte.material = mat
 		_respirar.call_deferred()
 	_criar_faiscas()
@@ -64,30 +68,53 @@ func _respirar() -> void:
 
 
 func _criar_faiscas() -> void:
-	for cor: Color in [Color(1.0, 0.85, 0.35, 0.9), Color(0.45, 0.85, 1.0, 0.8)]:
-		var e := CPUParticles2D.new()
-		e.texture = FxPino._textura_ponto()
-		e.amount = 18
-		e.lifetime = 5.0
-		e.preprocess = 5.0
-		e.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	# estrelas subindo e girando
+	for cor: Color in [Color(1.0, 0.86, 0.38, 1.0), Color(0.50, 0.88, 1.0, 0.95)]:
+		var e := _emissor(FxPino.TEX_ESTRELA, 16, 5.0)
 		e.emission_rect_extents = Vector2(Tela.TAMANHO.x * 0.5, 20)
 		e.position = Vector2(Tela.TAMANHO.x * 0.5, Tela.TAMANHO.y + 20)
-		e.direction = Vector2(0, -1)
-		e.spread = 12.0
-		e.gravity = Vector2.ZERO
-		e.initial_velocity_min = 220.0
-		e.initial_velocity_max = 380.0
-		e.scale_amount_min = 0.25
-		e.scale_amount_max = 0.6
-		var some := Gradient.new()
-		some.offsets = PackedFloat32Array([0.0, 0.2, 0.8, 1.0])
-		some.colors = PackedColorArray([Color(cor, 0.0), cor, cor, Color(cor, 0.0)])
-		e.color_ramp = some
-		var mat := CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		e.material = mat
+		e.initial_velocity_min = 200.0
+		e.initial_velocity_max = 360.0
+		e.scale_amount_min = 0.12
+		e.scale_amount_max = 0.34
+		e.angle_min = 0.0
+		e.angle_max = 90.0
+		e.angular_velocity_min = -90.0
+		e.angular_velocity_max = 90.0
+		# acende, pisca no meio do caminho e apaga
+		var ramp := Gradient.new()
+		ramp.offsets = PackedFloat32Array([0.0, 0.12, 0.35, 0.45, 0.55, 0.85, 1.0])
+		ramp.colors = PackedColorArray([Color(cor, 0.0), cor, Color(cor, 0.35), cor, Color(cor, 0.5), cor, Color(cor, 0.0)])
+		e.color_ramp = ramp
 		add_child(e)
+	# luzes macias (bokeh), grandes e lentas
+	var bokeh := _emissor(FxPino.TEX_BRILHO, 9, 7.0)
+	bokeh.emission_rect_extents = Vector2(Tela.TAMANHO.x * 0.5, Tela.TAMANHO.y * 0.5)
+	bokeh.position = Tela.TAMANHO * 0.5
+	bokeh.spread = 180.0
+	bokeh.initial_velocity_min = 8.0
+	bokeh.initial_velocity_max = 30.0
+	bokeh.scale_amount_min = 0.5
+	bokeh.scale_amount_max = 1.2
+	bokeh.color_initial_ramp = FxPino._gradiente([0.0, 0.5, 0.51, 1.0],
+		[Color(1.0, 0.8, 0.4), Color(1.0, 0.8, 0.4), Color(0.4, 0.75, 1.0), Color(0.4, 0.75, 1.0)])
+	bokeh.color_ramp = FxPino._gradiente([0.0, 0.3, 0.7, 1.0],
+		[Color(1, 1, 1, 0.0), Color(1, 1, 1, 0.22), Color(1, 1, 1, 0.22), Color(1, 1, 1, 0.0)])
+	add_child(bokeh)
+
+
+func _emissor(tex: Texture2D, quantos: int, vida: float) -> CPUParticles2D:
+	var e := CPUParticles2D.new()
+	e.texture = tex
+	e.amount = quantos
+	e.lifetime = vida
+	e.preprocess = vida
+	e.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	e.direction = Vector2(0, -1)
+	e.spread = 12.0
+	e.gravity = Vector2.ZERO
+	e.material = FxPino.material_somar()
+	return e
 
 
 func _criar_selo() -> void:

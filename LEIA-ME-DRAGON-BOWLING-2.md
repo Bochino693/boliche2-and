@@ -10,15 +10,25 @@ A versão 2 do Dragon Bowling, feita a partir do Dragon Bowling (boliche-and-rai
 - Avisos novos: **SPLIT!** (sobram 7 e 10) e **QUASE!** (sobra um pino na primeira bola).
 - A tabela fica em `scripts/game.gd` (`DESTINOS_DO_MEIO`, `CHANCE_SOBRA_LATERAL`, `CHANCE_DE_TABELA`) e pode ser ajustada.
 
-### Quedas e bola com efeitos
-- Cada pino que cai solta **faíscas douradas** no contato, deixa um **rastro** (duas cópias translúcidas que ficam para trás) e levanta **poeira** ao bater no chão (`scripts/fx_pino.gd`). Tudo é criado quando o pino nasce, nada durante a jogada.
-- A bola tem um **rastro luminoso** azul e dourado que segue a trajetória.
-- O contato dá um **tranco na câmera** (maior no strike), e a bola atravessa os pinos sem parar.
+### Bola azul nova
+- A bola é **azul, marmorizada**, com pontinhos dourados e os três furos — combinando com a bola da arte. É renderizada em 3D (`tools/gerar_bola_azul.py`): **16 quadros de giro** em 256 px, borda lisa, girando para a frente enquanto rola pista acima (`sprites/bola_azul.png`).
+- Tem **rastro luminoso** azul e dourado, e o contato dá um **tranco na câmera** (maior no strike); a bola atravessa os pinos sem parar.
 
-### Arte da abertura viva
-- No menu, a arte ganha vida (`shaders/arte_viva.gdshader`): um **reflexo** passa pelas letras do título, o **brilho gira** na bola azul, as **esferas do dragão pulsam** e as **estrelas cintilam**. A arte "respira" com um zoom lento, e **faíscas** sobem pela tela (`scripts/menu_vivo.gd`).
-- O **selo "2"** entra girando ao lado do PRO e fica pulsando.
-- Na pista, o mesmo espírito: um reflexo passa pelo dourado (emblema e espiral) e faíscas sobem da espiral brilhante.
+### Queda dos pinos
+- Os pinos **caem para trás**: voam pista acima, rumo ao fosso, e deitam em perspectiva (encurtando), girando na diagonal; golpe de lado derruba de lado. No pouso dão um quique curto e depois **escorregam para o fosso** e somem.
+- **Colisão entre pinos**: na cascata, o pino que caiu logo antes, entre a bola e o próximo, é quem "bate" nele — o próximo voa para longe dele, com faíscas no ponto de choque (reação em cadeia).
+- Os pinos que **ficam em pé balançam** com o tranco do vizinho (só visual; o resultado da jogada não muda).
+- Efeitos no contato (`scripts/fx_pino.gd`): **clarão**, **anel de choque** deitado na pista, **faíscas em estrela de 4 pontas** e **lascas** brancas e vermelhas girando; no pouso, uma fumacinha rasteira.
+
+### Partículas em alta resolução
+- Nada de pontinho quadrado ampliado: cada partícula tem forma própria, desenhada em alta com bordas lisas e mipmaps (`tools/gerar_particulas.py` → `sprites/fx/`: estrela, brilho, lasca, fumaça, anel).
+- A poeira que flutuava no meio da pista foi **removida**.
+
+### Arte da abertura viva ("foto 3D")
+- No menu, a arte vira uma **foto 3D**: um mapa de camadas (`tools/gerar_profundidade_arte.py` → `sprites/dragon_bow_camadas.png`) diz o que está na frente (título), no meio (dragão, bola, esferas) e atrás (fundo), e a câmera passeia devagar — cada camada se desloca de um jeito (paralaxe).
+- O **dragão respira**, a **bola balança girando**, o **título pulsa** como um coração, nuvens e pinos **ondulam**; continuam o reflexo no título, o brilho na bola, as esferas pulsando e as estrelas cintilando (`shaders/arte_viva.gdshader`).
+- **Estrelas de 4 pontas** douradas e azuis sobem girando e **luzes macias** (bokeh) flutuam na frente (`scripts/menu_vivo.gd`). O **selo "2"** entra girando ao lado do PRO e fica pulsando.
+- Na pista, um reflexo passa pelo dourado (emblema e espiral).
 
 ## Zero Delay
 
